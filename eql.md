@@ -28,8 +28,8 @@ With that statement you can introduce constraints from one event to the next. Fo
 For example this query will look for the process cmd.exe, and then look if the process.id matches the next event which is a file creation event by the process.parent.id.
 
 ```eql
-[ process where process_name == "cmd.exe" ] by process.id
-[ file where event.action == "create" ] by process.parent.id
+[ process where process.name == "cmd.exe" ] by process.pid
+[ file where event.action == "create" ] by process.parent.pid
 ```
 #### with runs
 
@@ -39,4 +39,16 @@ This is for example interesting to look for a brute force attack, where the same
 ```eql
 sequence by host.id, source.ip, user.name with maxspan=15s
 [ authentication where event.outcome == "failure" ] with runs = 10
+```
+
+#### until
+
+The until statement is primarily used to limit ressource ussage since if the specified event occurs within a sequence, the sequence will be terminated.
+For example it is usefull if you're hunting for a process, and at some point the process is terminated, so in that case ther is no need to search for more events, since the process does not exist anymore.
+
+```eql
+sequence
+  [ process where process.name == "cmd.exe" and command_line == "* *.bat*" and event_subtype_full == "creation_event"] by process.pid
+  [ process where process.name == "whoami.exe" and event_subtype_full == "creation_event"] by process.parent.pid
+until [ process where event_subtype_full == "termination_event"] by process.pid
 ```
