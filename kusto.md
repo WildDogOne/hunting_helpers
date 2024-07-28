@@ -97,6 +97,30 @@ DeviceProcessEvents
 | join kind=anti (test) on DeviceName
 ```
 
+## Mass Filtering
+
+Quite often one will build subqueries that filter out a lot of data.
+Depending on how these queries results are structured there are multiple ways to use them.
+
+### Join
+
+It is possible to use join to filter in or out data.
+This is especially powerfull if multiple fields need to match up.
+However it is also very slow.
+
+```kusto
+| join kind=inner subquery on Field1, Field2
+```
+
+### Where in~
+
+If the result of the subquery is a single column, you can use the in operator.
+Adding the tilde symbol (~) will make the query case insensitive.
+
+```kusto
+| where Application in~ (KnownApps)
+```
+
 ## Expands / Extends
 
 ### extend
@@ -170,8 +194,36 @@ Expected Resulting Fields:
 GlobalPrevalence for example is very usefull to see how common a file is, and might be an indicator of a false positive.
 IsCertificateValid is usefull to see if a file is signed by a valid certificate, which is an indicator of trustworthyness.
 
+## Functions
 
-## Geolocation
+### Base64 Decode
+
+It is possible to decode base64 encoded strings directly in Kusto.
+This brings some interesting possibilities, like checking for encoded commands, decoding them and then Whitelisting on the actual command.
+
+Example query extracts Base64 encoded strings from a field and then decodes them.
+Important is also the replace_regex function, which is used to remove Unicode symbols that appear after base64 decoding because of lazy MS implementations as usual.
+
+```kusto
+| extend base64_data = extract("([A-Za-z0-9+/]+={1,2}$|[A-Za-z0-9+/]{100,})", 0, ProcessCommandLine)
+| where isnotempty(base64_data)
+| extend decoded = base64_decode_tostring(base64_data)
+| extend decoded = replace_regex(decoded, '[\\0]+', '') //Remove Unicode symbols that for some reason appear after base64 decoding
+``` 
+
+
+### Punycode Decoding
+
+Punycode is a way to encode Unicode characters in a way that is compatible with DNS.
+This is often used in phishing attacks to make the domain look like a legitimate one.
+To decode Punycode you can use the punycode_domain_from_string function.
+Important to not though, is that the function cannot handle the http:// or https:// in front of the domain.
+
+```kusto
+| where RemoteUrl matches regex "xn--[a-z0-9]+"
+| extend decoded = replace_strings(RemoteUrl, dynamic(["http://","https://"]), dynamic(["",""]))
+| extend decoded = punycode_domain_from_string(decoded)
+```
 
 ### IP to Location
 

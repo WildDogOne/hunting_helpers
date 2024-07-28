@@ -47,8 +47,30 @@ The until statement is primarily used to limit ressource ussage since if the spe
 For example it is usefull if you're hunting for a process, and at some point the process is terminated, so in that case ther is no need to search for more events, since the process does not exist anymore.
 
 ```eql
-sequence
-  [ process where process.name == "cmd.exe" and command_line == "* *.bat*" and event_subtype_full == "creation_event"] by process.pid
-  [ process where process.name == "whoami.exe" and event_subtype_full == "creation_event"] by process.parent.pid
-until [ process where event_subtype_full == "termination_event"] by process.pid
+sequence by process.pid
+  [ process where event.type == "start" and process.name == "cmd.exe" ]
+  [ process where file.extension == "exe" ]
+until [ process where event.type == "stop" ]
+```
+
+#### !
+The exclamation mark is used to negate a condition.
+For example you don't want a certain event to happen in the sequence, you can use the exclamation mark.
+
+```eql
+sequence with maxspan=1h
+  [ event_category_1 where condition_1 ]
+  ![ event_category_2 where condition_2 ]
+  [ event_category_3 where condition_3 ]
+````
+
+### Pipe 
+
+#### Tail
+The Tail Pipe can be used to limit the number of results returned. For example if you're looking for a sequence that has a lot of results, you can use the tail pipe to only return the last X results.
+
+```eql
+sequence by host.id, source.ip, user.name with maxspan=15s
+[ authentication where event.outcome == "failure" ] with runs = 10
+| tail 10
 ```
