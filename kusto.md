@@ -112,7 +112,7 @@ However it is also very slow.
 | join kind=inner subquery on Field1, Field2
 ```
 
-### Where in~
+###  in
 
 If the result of the subquery is a single column, you can use the in operator.
 Adding the tilde symbol (~) will make the query case insensitive.
@@ -120,6 +120,13 @@ Adding the tilde symbol (~) will make the query case insensitive.
 ```kusto
 | where Application in~ (KnownApps)
 ```
+### has
+
+An alternative to in, can be any of the has operators.
+```kusto
+| where not(Application has_any (KnownApps))
+```
+
 
 ## Expands / Extends
 
@@ -230,4 +237,11 @@ Important to not though, is that the function cannot handle the http:// or https
 If you have an IP Address and you want to know where it is located, you can use the geo_info_from_ip_address function.
 ```kusto
 | extend location = geo_info_from_ip_address(RemoteIP)
+```
+
+### Unpacking JSON
+
+If you have JSON content and want to fully unpack it so you can query it, you can use the bag_unpack evaluate function
+```kusto
+| evaluate bag_unpack(RawEventData)
 ```
